@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/local_data_service.dart';
@@ -80,6 +81,44 @@ class AuthService {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  static Future<String?> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+  }) async {
+    try {
+      await ApiService.dio.post(
+        '/api/Auth/reset-password',
+        data: {
+          'email': email,
+          'token': token,
+          // Backend DTO: ResetPasswordDto.NewPassword
+          'newPassword': password,
+        },
+      );
+      return null;
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final data = e.response?.data;
+
+      // Flutter Web'de CORS genelde response'u null bırakır.
+      if (status == null && e.type == DioExceptionType.connectionError) {
+        return 'İstek engellendi (CORS/bağlantı). Backend CORS izinlerini kontrol edin.';
+      }
+
+      if (data is Map && data['message'] is String) {
+        return data['message'] as String;
+      }
+      if (data is String && data.trim().isNotEmpty) {
+        return data;
+      }
+
+      return 'Şifre güncellenemedi (HTTP $status).';
+    } catch (_) {
+      return 'Şifre güncellenemedi.';
     }
   }
 

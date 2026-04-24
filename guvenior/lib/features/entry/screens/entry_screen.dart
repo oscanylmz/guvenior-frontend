@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/services/local_data_service.dart';
 import '../../../core/utils/currency_format.dart';
@@ -149,8 +148,18 @@ class _EntryScreenState extends State<EntryScreen>
     return _expenses.any((e) => _isSameDay(e.spentAt, d));
   }
 
-  bool _hasRecurring(int day) =>
-      _recurring.any((r) => r.isActive && r.dayOfMonth == day);
+  int _scheduledDayInMonth(int dayOfMonth, DateTime month) {
+    final maxDay = DateTime(month.year, month.month + 1, 0).day;
+    if (dayOfMonth < 1) return 1;
+    if (dayOfMonth > maxDay) return maxDay;
+    return dayOfMonth;
+  }
+
+  bool _hasRecurring(int day) {
+    final month = _focusedMonth;
+    return _recurring.any((r) =>
+        r.isActive && _scheduledDayInMonth(r.dayOfMonth, month) == day);
+  }
 
   List<_Transaction> _transactionsForDay(DateTime day) {
     final result = <_Transaction>[];
@@ -185,7 +194,8 @@ class _EntryScreenState extends State<EntryScreen>
     }
     // Recurring expenses for this day of month
     for (final r in _recurring) {
-      if (r.isActive && r.dayOfMonth == day.day) {
+      final scheduledDay = _scheduledDayInMonth(r.dayOfMonth, day);
+      if (r.isActive && scheduledDay == day.day) {
         result.add(_Transaction(
           id: 'rec_${r.id}', title: r.title, amount: r.amount,
           date: day, isIncome: false, typeOrCategory: r.category,
@@ -981,10 +991,10 @@ class _EntryScreenState extends State<EntryScreen>
   }
 
   Widget _buildTransactionTile(_Transaction t) {
-    final color = t.isIncome
-        ? AppColors.peach
-        : t.isRecurring
-            ? const Color(0xFFA29BFE)
+    final color = t.isRecurring
+        ? const Color(0xFFA29BFE)
+        : t.isIncome
+            ? AppColors.peach
             : (_categoryColors[t.typeOrCategory] ?? Colors.white54);
     final icon = t.isIncome
         ? (_typeIcons[t.typeOrCategory] ?? Icons.attach_money)
